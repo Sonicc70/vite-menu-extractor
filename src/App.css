@@ -48,7 +48,6 @@ body {
   align-items: center;
   gap: 16px;
   padding: 40px 0 32px;
-  border-bottom: 2px solid var(--border-2);
 }
 .logo-mark {
   font-size: 36px;
