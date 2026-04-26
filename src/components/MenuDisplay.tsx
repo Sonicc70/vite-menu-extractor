@@ -1,12 +1,16 @@
 import { useState, useCallback } from 'react';
-import type { MenuData } from '../types';
+import type { FileItem, MenuData } from '../types';
 
 interface MenuDisplayProps {
-  menu: MenuData;
-  fileName: string | null;
+  files: FileItem[];
 }
 
-export function MenuDisplay({ menu, fileName }: MenuDisplayProps) {
+interface SingleMenuProps {
+  menu: MenuData;
+  fileName: string;
+}
+
+function SingleMenuView({ menu, fileName }: SingleMenuProps) {
   const [copied, setCopied] = useState(false);
   const [activeTab, setActiveTab] = useState<'visual' | 'json'>('visual');
 
@@ -20,12 +24,10 @@ export function MenuDisplay({ menu, fileName }: MenuDisplayProps) {
   const totalItems = menu.reduce((sum, cat) => sum + cat.entries.length, 0);
 
   return (
-    <div className="menu-display">
-      <div className="menu-header">
-        <div className="menu-meta">
-          {fileName && <span className="file-badge">{fileName}</span>}
-          <span className="stats-badge">{menu.length} categories · {totalItems} items</span>
-        </div>
+    <div className="single-menu-view">
+      <div className="menu-view-meta">
+        <span className="file-badge">{fileName}</span>
+        <span className="stats-badge">{menu.length} categories · {totalItems} items</span>
         <div className="tab-buttons">
           <button
             className={`tab-btn ${activeTab === 'visual' ? 'active' : ''}`}
@@ -91,6 +93,52 @@ export function MenuDisplay({ menu, fileName }: MenuDisplayProps) {
           )}
         </button>
       </div>
+    </div>
+  );
+}
+
+export function MenuDisplay({ files }: MenuDisplayProps) {
+  const successFiles = files.filter(f => f.status === 'success' && f.menu);
+  const [activeFileId, setActiveFileId] = useState<string>(successFiles[0]?.id ?? '');
+
+  // Keep active tab in sync when files resolve
+  const resolvedId = successFiles.find(f => f.id === activeFileId)
+    ? activeFileId
+    : successFiles[0]?.id ?? '';
+
+  const activeFile = successFiles.find(f => f.id === resolvedId);
+
+  if (successFiles.length === 0) return null;
+
+  return (
+    <div className="menu-display">
+      <div className="menu-header">
+        <div className="menu-file-tabs">
+          {successFiles.map(f => (
+            <button
+              key={f.id}
+              className={`menu-file-tab ${resolvedId === f.id ? 'active' : ''}`}
+              onClick={() => setActiveFileId(f.id)}
+              title={f.fileName}
+            >
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <rect x="1" y="1" width="8" height="11" rx="1" stroke="currentColor" strokeWidth="1.3" fill="none"/>
+                <path d="M9 1l3 3" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round"/>
+                <rect x="9" y="1" width="3" height="3" rx="0.5" stroke="currentColor" strokeWidth="1.3" fill="none"/>
+              </svg>
+              <span className="menu-file-tab-name">{f.fileName}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {activeFile && activeFile.menu && (
+        <SingleMenuView
+          key={activeFile.id}
+          menu={activeFile.menu}
+          fileName={activeFile.fileName}
+        />
+      )}
     </div>
   );
 }

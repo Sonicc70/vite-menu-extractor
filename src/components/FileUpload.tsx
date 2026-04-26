@@ -1,31 +1,41 @@
 import { useRef, useState, useCallback } from 'react';
 
 interface FileUploadProps {
-  onFileSelect: (file: File) => void;
+  onFilesSelect: (files: File[]) => void;
   disabled?: boolean;
 }
 
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'application/pdf'];
 const ACCEPTED_EXTENSIONS = '.jpg,.jpeg,.png,.webp,.pdf';
 
-export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
+export function FileUpload({ onFilesSelect, disabled }: FileUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const handleFile = useCallback((file: File) => {
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      alert('Unsupported file type. Please upload a JPG, PNG, WEBP, or PDF file.');
-      return;
+  const handleFiles = useCallback((rawFiles: FileList | File[]) => {
+    const arr = Array.from(rawFiles);
+    const valid = arr.filter(f => ACCEPTED_TYPES.includes(f.type));
+    const invalid = arr.filter(f => !ACCEPTED_TYPES.includes(f.type));
+
+    if (invalid.length > 0) {
+      alert(
+        `${invalid.length} file(s) were skipped (unsupported type):\n` +
+        invalid.map(f => `• ${f.name}`).join('\n') +
+        '\n\nSupported: JPG, PNG, WEBP, PDF'
+      );
     }
-    onFileSelect(file);
-  }, [onFileSelect]);
+    if (valid.length > 0) {
+      onFilesSelect(valid);
+    }
+  }, [onFilesSelect]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) handleFile(file);
-  }, [handleFile]);
+    if (e.dataTransfer.files.length > 0) {
+      handleFiles(e.dataTransfer.files);
+    }
+  }, [handleFiles]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -37,11 +47,11 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
   }, []);
 
   const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) handleFile(file);
-    // Reset input so same file can be re-uploaded
+    if (e.target.files && e.target.files.length > 0) {
+      handleFiles(e.target.files);
+    }
     e.target.value = '';
-  }, [handleFile]);
+  }, [handleFiles]);
 
   return (
     <div
@@ -55,6 +65,7 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
         ref={inputRef}
         type="file"
         accept={ACCEPTED_EXTENSIONS}
+        multiple
         onChange={handleInputChange}
         style={{ display: 'none' }}
         disabled={disabled}
@@ -68,9 +79,9 @@ export function FileUpload({ onFileSelect, disabled }: FileUploadProps) {
         </svg>
       </div>
       <p className="upload-label">
-        {isDragging ? 'Drop your file here' : 'Drag & drop or click to upload'}
+        {isDragging ? 'Drop files here' : 'Drag & drop or click to upload'}
       </p>
-      <p className="upload-sublabel">JPG · PNG · WEBP · PDF — up to 20MB</p>
+      <p className="upload-sublabel">JPG · PNG · WEBP · PDF — multiple files supported</p>
     </div>
   );
 }
